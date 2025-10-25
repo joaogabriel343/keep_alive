@@ -7,9 +7,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const logContainer = document.getElementById('log-container');
     const projectGrid = document.getElementById('project-grid');
     const connectionStatus = document.getElementById('connection-status');
+    const closeModalBtn = document.querySelector('.close-modal-btn');
+    const connectBtn = document.getElementById('connect-btn');
 
     let projects = JSON.parse(localStorage.getItem('supabase_projects')) || [];
     let activeTimers = {};
+
+    const openModal = () => {
+        projectForm.reset();
+        connectionStatus.innerHTML = '';
+        connectBtn.disabled = false;
+        connectBtn.textContent = 'Conectar e Configurar';
+        modalBackdrop.classList.remove('hidden');
+    };
+
+    const closeModal = () => {
+        modalBackdrop.classList.add('hidden');
+    };
 
     const log = (message, level = 'info') => {
         const time = new Date().toLocaleTimeString();
@@ -37,7 +51,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (createError) throw new Error(`Falha ao criar tabela: ${createError.message}.`);
                 log(`Tabela 'keep_alive' criada com sucesso!`, 'success');
 
-                // --- PONTO 1: DESATIVAR RLS AUTOMATICAMENTE ---
                 log(`Desativando Row Level Security para a tabela 'keep_alive'...`);
                 connectionStatus.innerHTML = `Desativando RLS...`;
                 const disableRlsSql = `ALTER TABLE public.keep_alive DISABLE ROW LEVEL SECURITY;`;
@@ -115,7 +128,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     projectForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const connectBtn = document.getElementById('connect-btn');
         connectBtn.disabled = true;
         connectBtn.textContent = 'Conectando...';
 
@@ -136,14 +148,9 @@ document.addEventListener('DOMContentLoaded', () => {
             saveAndRender();
             startPinging(newProject);
             
-            // --- PONTO 3: FECHAR O MODAL IMEDIATAMENTE ---
-            setTimeout(() => { // Usamos um pequeno delay para o usuário ver a mensagem de sucesso
-                modalBackdrop.classList.add('hidden');
-                projectForm.reset();
-                connectionStatus.innerHTML = '';
-                connectBtn.disabled = false;
-                connectBtn.textContent = 'Conectar e Configurar';
-            }, 1500); // 1.5 segundos
+            setTimeout(() => {
+                closeModal();
+            }, 1500);
 
         } else {
             connectBtn.disabled = false;
@@ -188,9 +195,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    addProjectBtn.addEventListener('click', () => modalBackdrop.classList.remove('hidden'));
+    addProjectBtn.addEventListener('click', openModal);
+    closeModalBtn.addEventListener('click', closeModal);
     modalBackdrop.addEventListener('click', (e) => {
-        if (e.target === modalBackdrop) modalBackdrop.classList.add('hidden');
+        if (e.target === modalBackdrop) closeModal();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modalBackdrop.classList.contains('hidden')) {
+            closeModal();
+        }
     });
 
     const initialize = () => {
