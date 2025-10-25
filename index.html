@@ -30,6 +30,7 @@
     <div id="modal-backdrop" class="hidden">
         <div id="modal-content">
             <span class="close-modal-btn">&times;</span>
+            
             <h2>Adicionar e Configurar Projeto</h2>
             <form id="project-form">
                 <input type="text" id="projectName" placeholder="Nome do Projeto" required>
@@ -43,6 +44,45 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', ( ) => {
+            const addProjectBtn = document.getElementById('add-project-btn');
+            const modalBackdrop = document.getElementById('modal-backdrop');
+            const closeModalBtn = document.querySelector('.close-modal-btn');
+            const projectForm = document.getElementById('project-form');
+            const connectionStatus = document.getElementById('connection-status');
+            const connectBtn = document.getElementById('connect-btn');
+
+            const openModal = () => {
+                projectForm.reset();
+                connectionStatus.innerHTML = '';
+                connectBtn.disabled = false;
+                connectBtn.textContent = 'Conectar e Configurar';
+                modalBackdrop.classList.remove('hidden');
+            };
+
+            const closeModal = () => {
+                modalBackdrop.classList.add('hidden');
+            };
+
+            addProjectBtn.addEventListener('click', openModal);
+
+            closeModalBtn.addEventListener('click', closeModal);
+
+            modalBackdrop.addEventListener('click', (event) => {
+                if (event.target === modalBackdrop) {
+                    closeModal();
+                }
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && !modalBackdrop.classList.contains('hidden')) {
+                    closeModal();
+                }
+            });
+        });
+    </script>
+    
     <script src="app.js"></script>
 </body>
 </html>
