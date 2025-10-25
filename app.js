@@ -1,40 +1,19 @@
-// app.js (Versão Corrigida e Funcional)
-
 document.addEventListener('DOMContentLoaded', () => {
     const { createClient } = supabase;
 
-    // Elementos da Interface
-    const addProjectBtn = document.getElementById('add-project-btn');
-    const modalBackdrop = document.getElementById('modal-backdrop');
     const projectForm = document.getElementById('project-form');
     const logContainer = document.getElementById('log-container');
     const projectGrid = document.getElementById('project-grid');
     const connectionStatus = document.getElementById('connection-status');
     const connectBtn = document.getElementById('connect-btn');
-    const closeModalBtn = document.querySelector('.close-modal-btn'); // Variável que faltava
 
-    // Armazenamento local
     let projects = JSON.parse(localStorage.getItem('supabase_projects')) || [];
     let activeTimers = {};
 
-    // --- Funções de Controle do Modal (Corrigidas) ---
-    const openModal = () => {
-        projectForm.reset();
-        connectionStatus.innerHTML = '';
-        connectBtn.disabled = false;
-        connectBtn.textContent = 'Conectar e Configurar';
-        modalBackdrop.classList.remove('hidden');
-    };
-
-    const closeModal = () => {
-        modalBackdrop.classList.add('hidden');
-    };
-
-    // --- Lógica Principal (sem alterações) ---
     const log = (message, level = 'info') => {
         const time = new Date().toLocaleTimeString();
         const color = level === 'error' ? '#ef4444' : (level === 'success' ? '#22c55e' : '#94a3b8');
-        logContainer.innerHTML += `<div style="color:${color};">[${time}] ${message}</div>`;
+        logContainer.innerHTML += `<div><span style="color: #64748b;">[${time}]</span> ${message}</div>`;
         logContainer.scrollTop = logContainer.scrollHeight;
     };
 
@@ -42,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const setupProject = async (project) => {
         log(`Iniciando configuração para <strong>${project.name}</strong>...`);
-        connectionStatus.innerHTML = `Verificando conexão com ${project.name}...`;
+        connectionStatus.innerHTML = `Verificando conexão...`;
         const adminClient = getAdminClient(project);
 
         try {
@@ -57,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (createError) throw new Error(`Falha ao criar tabela: ${createError.message}.`);
                 log(`Tabela 'keep_alive' criada com sucesso!`, 'success');
 
-                log(`Desativando Row Level Security para a tabela 'keep_alive'...`);
+                log(`Desativando RLS para 'keep_alive'...`);
                 connectionStatus.innerHTML = `Desativando RLS...`;
                 const disableRlsSql = `ALTER TABLE public.keep_alive DISABLE ROW LEVEL SECURITY;`;
                 const { error: rlsError } = await adminClient.rpc('execute_sql', { sql: disableRlsSql });
@@ -67,11 +46,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 log(`Tabela 'keep_alive' já existe.`);
             }
 
-            connectionStatus.innerHTML = `<span style="color:green;">Projeto configurado com sucesso!</span>`;
+            connectionStatus.innerHTML = `<span style="color:var(--success-color);">Projeto configurado!</span>`;
             return true;
         } catch (error) {
             log(error.message, 'error');
-            connectionStatus.innerHTML = `<span style="color:red;">${error.message}</span>`;
+            connectionStatus.innerHTML = `<span style="color:var(--danger-color);">${error.message}</span>`;
             return false;
         }
     };
@@ -97,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const intervalMillis = project.interval * 60 * 1000;
         pingProject(project);
         activeTimers[project.id] = setInterval(() => pingProject(project), intervalMillis);
-        log(`Automação iniciada para <strong>${project.name}</strong>. Intervalo: ${project.interval} minutos.`);
+        log(`Automação iniciada para <strong>${project.name}</strong>. Intervalo: ${project.interval} min.`);
     };
 
     const saveAndRender = () => {
@@ -107,6 +86,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const renderProjects = () => {
         projectGrid.innerHTML = '';
+        if (projects.length === 0) {
+            projectGrid.innerHTML = `<p>Nenhum projeto adicionado ainda.</p>`;
+        }
         projects.forEach(p => {
             const card = document.createElement('div');
             card.className = 'project-card';
@@ -119,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="controls">
                     <label for="interval-${p.id}">Intervalo (minutos):</label>
-                    <input type="number" id="interval-${p.id}" value="${p.interval}" min="1">
+                    <input type="number" class="interval-input" id="interval-${p.id}" value="${p.interval}" min="1">
                 </div>
                 <div class="actions">
                     <button class="toggle-btn ${p.active ? 'active' : 'paused'}">${p.active ? 'Pausar' : 'Iniciar'}</button>
@@ -130,7 +112,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // --- Event Listeners (Ouvintes de Ação) ---
     projectForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         connectBtn.disabled = true;
@@ -152,11 +133,14 @@ document.addEventListener('DOMContentLoaded', () => {
             projects.push(newProject);
             saveAndRender();
             startPinging(newProject);
-            setTimeout(closeModal, 1500);
-        } else {
-            connectBtn.disabled = false;
-            connectBtn.textContent = 'Conectar e Configurar';
+            projectForm.reset();
         }
+        
+        setTimeout(() => {
+            connectionStatus.innerHTML = '';
+            connectBtn.disabled = false;
+            connectBtn.textContent = 'Adicionar e Configurar';
+        }, 3000);
     });
 
     projectGrid.addEventListener('click', (e) => {
@@ -185,32 +169,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     projectGrid.addEventListener('change', (e) => {
-        if (e.target.tagName === 'INPUT') {
+        if (e.target.classList.contains('interval-input')) {
             const card = e.target.closest('.project-card');
             const projectId = Number(card.dataset.id);
             const project = projects.find(p => p.id === projectId);
             project.interval = Number(e.target.value);
             saveAndRender();
             startPinging(project);
-            log(`Intervalo para <strong>${project.name}</strong> atualizado para ${project.interval} minutos.`);
+            log(`Intervalo para <strong>${project.name}</strong> atualizado para ${project.interval} min.`);
         }
     });
 
-    // --- Event Listeners do Modal (Corrigidos) ---
-    addProjectBtn.addEventListener('click', openModal);
-    closeModalBtn.addEventListener('click', closeModal);
-    modalBackdrop.addEventListener('click', (e) => {
-        if (e.target === modalBackdrop) {
-            closeModal();
-        }
-    });
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !modalBackdrop.classList.contains('hidden')) {
-            closeModal();
-        }
-    });
-
-    // Função de inicialização
     const initialize = () => {
         renderProjects();
         projects.forEach(startPinging);
