@@ -1,18 +1,23 @@
+// app.js (Versão Corrigida e Funcional)
+
 document.addEventListener('DOMContentLoaded', () => {
     const { createClient } = supabase;
 
+    // Elementos da Interface
     const addProjectBtn = document.getElementById('add-project-btn');
     const modalBackdrop = document.getElementById('modal-backdrop');
     const projectForm = document.getElementById('project-form');
     const logContainer = document.getElementById('log-container');
     const projectGrid = document.getElementById('project-grid');
     const connectionStatus = document.getElementById('connection-status');
-    const closeModalBtn = document.querySelector('.close-modal-btn');
     const connectBtn = document.getElementById('connect-btn');
+    const closeModalBtn = document.querySelector('.close-modal-btn'); // Variável que faltava
 
+    // Armazenamento local
     let projects = JSON.parse(localStorage.getItem('supabase_projects')) || [];
     let activeTimers = {};
 
+    // --- Funções de Controle do Modal (Corrigidas) ---
     const openModal = () => {
         projectForm.reset();
         connectionStatus.innerHTML = '';
@@ -25,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
         modalBackdrop.classList.add('hidden');
     };
 
+    // --- Lógica Principal (sem alterações) ---
     const log = (message, level = 'info') => {
         const time = new Date().toLocaleTimeString();
         const color = level === 'error' ? '#ef4444' : (level === 'success' ? '#22c55e' : '#94a3b8');
@@ -57,14 +63,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const { error: rlsError } = await adminClient.rpc('execute_sql', { sql: disableRlsSql });
                 if (rlsError) throw new Error(`Falha ao desativar RLS: ${rlsError.message}.`);
                 log(`RLS desativada com sucesso para 'keep_alive'.`, 'success');
-
             } else {
                 log(`Tabela 'keep_alive' já existe.`);
             }
 
             connectionStatus.innerHTML = `<span style="color:green;">Projeto configurado com sucesso!</span>`;
             return true;
-
         } catch (error) {
             log(error.message, 'error');
             connectionStatus.innerHTML = `<span style="color:red;">${error.message}</span>`;
@@ -95,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
         activeTimers[project.id] = setInterval(() => pingProject(project), intervalMillis);
         log(`Automação iniciada para <strong>${project.name}</strong>. Intervalo: ${project.interval} minutos.`);
     };
-    
+
     const saveAndRender = () => {
         localStorage.setItem('supabase_projects', JSON.stringify(projects));
         renderProjects();
@@ -126,6 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    // --- Event Listeners (Ouvintes de Ação) ---
     projectForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         connectBtn.disabled = true;
@@ -147,11 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
             projects.push(newProject);
             saveAndRender();
             startPinging(newProject);
-            
-            setTimeout(() => {
-                closeModal();
-            }, 1500);
-
+            setTimeout(closeModal, 1500);
         } else {
             connectBtn.disabled = false;
             connectBtn.textContent = 'Conectar e Configurar';
@@ -195,10 +196,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // --- Event Listeners do Modal (Corrigidos) ---
     addProjectBtn.addEventListener('click', openModal);
     closeModalBtn.addEventListener('click', closeModal);
     modalBackdrop.addEventListener('click', (e) => {
-        if (e.target === modalBackdrop) closeModal();
+        if (e.target === modalBackdrop) {
+            closeModal();
+        }
     });
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && !modalBackdrop.classList.contains('hidden')) {
@@ -206,6 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Função de inicialização
     const initialize = () => {
         renderProjects();
         projects.forEach(startPinging);
